@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLATAFORMA ELECTORAL · USHUAIA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090c;--s1:#0c0f16;--s2:#111520;--s3:#171c28;--s4:#1e2433;
+  --b1:rgba(255,255,255,0.05);--b2:rgba(255,255,255,0.09);--b3:rgba(255,255,255,0.16);
+  --txt:#d8e0f0;--m1:#424e65;--m2:#7a88a0;
+  --acc:#f0c040;--blu:#4a90f5;--grn:#2ecc8a;--red:#f05050;--pur:#9b70f0;--ora:#f07830;
+  --r:8px;
+}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans',sans-serif;font-size:13px;min-height:100vh;overflow-x:hidden}
+
+/* ═══ UPLOAD ═══ */
+#upload-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;overflow:hidden}
+#upload-screen::after{content:'2012—2025';position:absolute;font-family:'Bebas Neue',sans-serif;font-size:clamp(50px,12vw,180px);color:rgba(255,255,255,0.015);letter-spacing:4px;bottom:10%;right:5%;pointer-events:none}
+.up-panel{max-width:760px;width:100%;z-index:1}
+.up-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--blu);text-transform:uppercase;margin-bottom:14px}
+.up-h{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,6vw,62px);letter-spacing:2px;line-height:1;margin-bottom:4px}
+.up-h span{color:var(--acc)}
+.up-sub{font-size:12px;color:var(--m2);line-height:1.8;margin-bottom:28px;max-width:560px}
+
+.drop-area{border:1.5px dashed var(--b3);border-radius:14px;padding:36px;text-align:center;cursor:pointer;transition:all .25s;margin-bottom:20px;position:relative;overflow:hidden}
+.drop-area::before{content:'';position:absolute;inset:0;background:rgba(74,144,245,0);transition:background .25s}
+.drop-area:hover,.drop-area.over{border-color:var(--blu);background:rgba(74,144,245,0.04)}
+.drop-icon{font-size:36px;margin-bottom:12px}
+.drop-txt{font-size:13px;color:var(--m2);line-height:1.7}
+.drop-txt strong{color:var(--txt);display:block;font-size:15px;margin-bottom:4px}
+.drop-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1);margin-top:8px}
+
+.files-list{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;min-height:0}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--b2);border-radius:7px;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:10px}
+.file-item .fi-icon{font-size:16px;flex-shrink:0}
+.file-item .fi-name{flex:1;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item .fi-size{color:var(--m1)}
+.file-item .fi-status{padding:2px 7px;border-radius:10px;font-size:9px}
+.fi-status.ok{background:rgba(46,204,138,0.12);color:var(--grn);border:1px solid rgba(46,204,138,0.25)}
+.fi-status.proc{background:rgba(74,144,245,0.12);color:var(--blu);border:1px solid rgba(74,144,245,0.25)}
+.fi-status.err{background:rgba(240,80,80,0.12);color:var(--red);border:1px solid rgba(240,80,80,0.25)}
+.file-item .fi-del{background:none;border:none;color:var(--m1);cursor:pointer;font-size:14px;padding:0 4px}
+.file-item .fi-del:hover{color:var(--red)}
+
+.up-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-primary{background:var(--acc);color:#07090c;border:none;padding:11px 36px;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2px;cursor:pointer;transition:opacity .2s;opacity:.3;pointer-events:none}
+.btn-primary.ready{opacity:1;pointer-events:all}.btn-primary.ready:hover{opacity:.85}
+.btn-secondary{background:transparent;border:1px solid var(--b2);color:var(--m2);padding:10px 20px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s}
+.btn-secondary:hover{border-color:var(--b3);color:var(--txt)}
+.up-note{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1);flex:1}
+
+/* ═══ APP ═══ */
+#app{display:none;flex-direction:column;min-height:100vh}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:11px 20px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:200;flex-shrink:0}
+.tb-logo{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;flex-shrink:0;white-space:nowrap}
+.tb-logo span{color:var(--acc)}
+.tb-stats{display:flex;gap:12px;flex:1;flex-wrap:wrap}
+.tb-stat{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1)}
+.tb-stat strong{color:var(--m2)}
+.tb-actions{display:flex;gap:6px;flex-shrink:0}
+.tb-btn{background:transparent;border:1px solid var(--b2);color:var(--m2);padding:5px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tb-btn:hover{color:var(--txt);border-color:var(--b3)}
+.tb-btn.danger:hover{color:var(--red);border-color:var(--red)}
+
+/* FILTER BAR */
+.filter-bar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--b1);flex-wrap:wrap;flex-shrink:0}
+.fb-label{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--m1);white-space:nowrap}
+.fsel{background:var(--s2);border:1px solid var(--b2);color:var(--txt);padding:5px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;outline:none;cursor:pointer}
+.fsel:focus{border-color:var(--blu)}
+.fsearch{background:var(--s2);border:1px solid var(--b2);color:var(--txt);padding:5px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;outline:none;width:200px}
+.fsearch::placeholder{color:var(--m1)}
+.fsearch:focus{border-color:var(--blu)}
+.fb-count{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1);white-space:nowrap}
+
+/* TABS */
+.nav{display:flex;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--b1);overflow-x:auto;flex-shrink:0}
+.ntab{padding:10px 16px;border:none;background:transparent;color:var(--m2);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.04em;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .18s}
+.ntab:hover{color:var(--txt)}.ntab.active{color:var(--acc);border-bottom-color:var(--acc);font-weight:500}
+
+/* CONTENT */
+.content{padding:20px;flex:1;overflow-y:auto}
+
+/* METRICS */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:16px}
+.mc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;position:relative;overflow:hidden}
+.mc-top{position:absolute;top:0;left:0;right:0;height:2px}
+.mc-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--m1);margin-bottom:6px}
+.mc-val{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;line-height:1;color:var(--txt)}
+.mc-sub{font-size:10px;color:var(--m2);margin-top:3px;line-height:1.4}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px}
+.card-title{font-family:'IBM Plex Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.13em;color:var(--m1);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.cw{position:relative;width:100%}
+
+/* TABLE */
+.tw{overflow-x:auto;overflow-y:auto}
+.tw.maxh{max-height:440px}
+.tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+.tbl th{background:var(--s2);padding:7px 10px;text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--m1);position:sticky;top:0;font-weight:400;border-bottom:1px solid var(--b1);white-space:nowrap;cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--m2)}.tbl th.sa::after{content:' ↑'}.tbl th.sd::after{content:' ↓'}
+.tbl td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.03);white-space:nowrap;vertical-align:middle}
+.tbl tr:hover td{background:rgba(255,255,255,0.02)}.tbl tr:last-child td{border-bottom:none}
+.tr{text-align:right}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:8px;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace}
+.tw{background:rgba(46,204,138,0.1);color:var(--grn);border:1px solid rgba(46,204,138,0.2)}
+.tl{background:rgba(240,80,80,0.1);color:var(--red);border:1px solid rgba(240,80,80,0.2)}
+.tc{background:rgba(240,192,64,0.1);color:var(--acc);border:1px solid rgba(240,192,64,0.2)}
+.tn{background:rgba(155,112,240,0.1);color:var(--pur);border:1px solid rgba(155,112,240,0.2)}
+
+/* PROGRESS */
+.pb{height:4px;border-radius:2px;background:var(--s3);overflow:hidden;margin-top:2px}
+.pbf{height:100%;border-radius:2px}
+
+/* ESCUELA CARD */
+.esc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:14px}
+.esc-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;transition:border-color .2s;cursor:pointer}
+.esc-card:hover{border-color:var(--b3)}
+.esc-card.win{border-left:3px solid var(--grn)}.esc-card.lose{border-left:3px solid var(--red)}.esc-card.close{border-left:3px solid var(--acc)}
+.ec-name{font-size:12px;font-weight:500;color:var(--txt);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec-circ{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--m1);margin-bottom:8px}
+.ec-row{display:flex;justify-content:space-between;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m2);padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.ec-row:last-child{border-bottom:none}
+.ec-row span:last-child{color:var(--m2);font-weight:500}
+.ec-chart-wrap{position:relative;height:140px;margin-top:10px}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#modal-overlay.show{display:flex}
+#modal{background:var(--s1);border:1px solid var(--b2);border-radius:12px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;position:relative}
+#modal-head{padding:16px 20px;border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center}
+#modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--txt)}
+#modal-close{background:none;border:none;color:var(--m2);cursor:pointer;font-size:20px;padding:0 4px}
+#modal-close:hover{color:var(--red)}
+#modal-body{padding:20px}
+
+/* HISTORICO LINE */
+.hist-partido-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.hpr-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hpr-name{flex:1;font-size:11px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpr-total{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m2);width:70px;text-align:right}
+
+/* LOADING */
+#loading{display:none;position:fixed;inset:0;background:rgba(7,9,12,0.92);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
+#loading.show{display:flex}
+.ld-t{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--m2);letter-spacing:.1em}
+.ld-b{width:200px;height:2px;background:var(--s3);border-radius:2px;overflow:hidden}
+.ld-f{height:100%;background:var(--acc);animation:lda 1.4s ease-in-out infinite}
+@keyframes lda{0%{width:0;margin-left:0}50%{width:55%;margin-left:20%}100%{width:0;margin-left:100%}}
+
+/* EMPTY */
+.empty{padding:40px;text-align:center;color:var(--m1);font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.9;border:1px dashed var(--b2);border-radius:var(--r)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+select option{background:var(--s2);color:var(--txt)}
+input[type=file]{display:none}
+
+/* PARTIDO COLOR BADGE */
+.p-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:9px;font-family:'IBM Plex Mono',monospace;font-weight:500;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="ld-t" id="ld-msg">PROCESANDO ARCHIVOS...</div>
+  <div class="ld-b"><div class="ld-f"></div></div>
+</div>
+
+<!-- MODAL DETALLE ESCUELA -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <div id="modal-head">
+      <div id="modal-title">DETALLE</div>
+      <button id="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('show')">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div id="upload-screen">
+  <div class="up-panel">
+    <div class="up-eyebrow">Plataforma de Análisis de Campañas · Ushuaia</div>
+    <div class="up-h">ELECTORAL<br><span>USHUAIA</span></div>
+    <div class="up-sub">Cargá archivos Excel, Word o TXT con resultados electorales de cualquier año (2012–2025). La plataforma detecta la estructura automáticamente y construye el análisis histórico acumulado.</div>
+
+    <div class="drop-area" id="drop-area" onclick="document.getElementById('file-input').click()">
+      <div class="drop-icon">📂</div>
+      <div class="drop-txt">
+        <strong>Arrastrá los archivos aquí</strong>
+        o hacé clic para seleccionar
+      </div>
+      <div class="drop-hint">Formatos: .xlsx · .xls · .csv · .txt &nbsp;|&nbsp; Podés cargar varios archivos a la vez</div>
+    </div>
+    <input type="file" id="file-input" multiple accept=".xlsx,.xls,.csv,.txt">
+
+    <div class="files-list" id="files-list"></div>
+
+    <div class="up-actions">
+      <button class="btn-primary" id="launch-btn" onclick="launchApp()">ANALIZAR →</button>
+      <button class="btn-secondary" onclick="loadDemo()">📊 Cargar datos de ejemplo</button>
+      <div class="up-note">Todos los análisis se procesan localmente en tu computadora. Ningún dato sale al exterior.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-logo">ELEC<span>·</span>USH</div>
+    <div class="tb-stats" id="tb-stats"></div>
+    <div class="tb-actions">
+      <button class="tb-btn" onclick="exportCSV()">↓ Exportar CSV</button>
+      <button class="tb-btn danger" onclick="resetApp()">↩ Reiniciar</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="fb-label">Filtros:</span>
+    <select class="fsel" id="f-anio"><option value="">Todos los años</option></select>
+    <select class="fsel" id="f-estamento"><option value="">Todos los estamentos</option></select>
+    <select class="fsel" id="f-partido"><option value="">Todos los partidos</option></select>
+    <select class="fsel" id="f-circ"><option value="">Todos los circuitos</option></select>
+    <input type="text" class="fsearch" id="f-search" placeholder="Buscar escuela...">
+    <span class="fb-count" id="f-count"></span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="showTab('escuelas',this)">POR ESCUELA</button>
+    <button class="ntab" onclick="showTab('circuitos',this)">CIRCUITOS</button>
+    <button class="ntab" onclick="showTab('historico',this)">HISTÓRICO 2012–2025</button>
+    <button class="ntab" onclick="showTab('recuperacion',this)">RECUPERACIÓN DE VOTOS</button>
+    <button class="ntab" onclick="showTab('fuerzas',this)">FUERZAS POLÍTICAS</button>
+    <button class="ntab" onclick="showTab('datos',this)">DATOS RAW</button>
+  </div>
+
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════
+let ROWS = [];       // todas las filas normalizadas
+let FILES = [];      // archivos cargados
+let CM = { escuela:'', circuito:'', partido:'', votos:'', padron:'', anio:'', estamento:'', masc:'', fem:'' };
+let CHARTS = [];
+let CURRENT_TAB = 'escuelas';
+let SORT = { col:'', dir:-1 };
+
+// Paleta de colores para partidos
+const PALETTE = ['#f0c040','#4a90f5','#2ecc8a','#f05050','#9b70f0','#f07830','#06d6d6','#f472b6','#84cc16','#e879f9','#14b8a6','#fb923c'];
+const partyColors = {};
+let colorIdx = 0;
+function getColor(partido) {
+  if (!partyColors[partido]) partyColors[partido] = PALETTE[colorIdx++ % PALETTE.length];
+  return partyColors[partido];
+}
+
+Chart.defaults.color = '#424e65';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = "'IBM Plex Mono',monospace";
+Chart.defaults.font.size = 10;
+
+// ═══════════════════════════════════════════════════════
+// CARGA DE ARCHIVOS
+// ═══════════════════════════════════════════════════════
+const dropArea = document.getElementById('drop-area');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('over'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('over'));
+dropArea.addEventListener('drop', e => { e.preventDefault(); dropArea.classList.remove('over'); addFiles([...e.dataTransfer.files]); });
+document.getElementById('file-input').addEventListener('change', e => { addFiles([...e.target.files]); e.target.value=''; });
+
+function addFiles(newFiles) {
+  newFiles.forEach(f => {
+    if (!FILES.find(x => x.file.name === f.name)) FILES.push({ file: f, status: 'pending', rows: [] });
+  });
+  renderFileList();
+  checkLaunch();
+}
+
+function removeFile(idx) { FILES.splice(idx, 1); renderFileList(); checkLaunch(); }
+
+function renderFileList() {
+  const el = document.getElementById('files-list');
+  if (!FILES.length) { el.innerHTML = ''; return; }
+  el.innerHTML = FILES.map((f, i) => `
+    <div class="file-item">
+      <span class="fi-icon">${f.file.name.endsWith('.xlsx')||f.file.name.endsWith('.xls') ? '📊' : f.file.name.endsWith('.csv') ? '📋' : '📄'}</span>
+      <span class="fi-name" title="${f.file.name}">${f.file.name}</span>
+      <span class="fi-size">${(f.file.size/1024).toFixed(0)} KB</span>
+      <span class="fi-status ${f.status==='ok'?'ok':f.status==='error'?'err':'proc'}">${f.status==='ok'?'✓ listo':f.status==='error'?'✗ error':'pendiente'}</span>
+      <button class="fi-del" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+function checkLaunch() {
+  document.getElementById('launch-btn').classList.toggle('ready', FILES.length > 0);
+}
+
+// ═══════════════════════════════════════════════════════
+// PROCESAMIENTO
+// ═══════════════════════════════════════════════════════
+async function launchApp() {
+  if (!FILES.length) return;
+  showLoading('Procesando archivos...');
+  ROWS = [];
+  colorIdx = 0;
+  Object.keys(partyColors).forEach(k => delete partyColors[k]);
+
+  for (const fobj of FILES) {
+    try {
+      const rows = await readFile(fobj.file);
+      if (rows.length) { ROWS = ROWS.concat(rows); fobj.status = 'ok'; }
+      else fobj.status = 'error';
+    } catch(e) { fobj.status = 'error'; }
+  }
+
+  if (!ROWS.length) { hideLoading(); alert('No se pudieron leer datos de los archivos. Verificá el formato.'); return; }
+
+  autoDetect();
+  buildApp();
+  hideLoading();
+  renderFileList();
+}
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        let rows = [];
+        if (file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt')) {
+          const text = new TextDecoder('utf-8').decode(ev.target.result);
+          rows = parseText(text, file.name);
+        } else {
+          const wb = XLSX.read(ev.target.result, { type:'array', cellDates:true });
+          wb.SheetNames.forEach(sn => {
+            const sh = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'', raw:false });
+            if (sh.length) rows = rows.concat(sh);
+          });
+        }
+        resolve(rows);
+      } catch(e) { reject(e); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseText(text, filename) {
+  // Detect separator
+  const firstLine = text.split('\n')[0];
+  const sep = firstLine.indexOf('\t') > -1 ? '\t' : firstLine.indexOf(';') > firstLine.indexOf(',') ? ';' : ',';
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(sep).map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(sep);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTODETECCIÓN DE COLUMNAS
+// ═══════════════════════════════════════════════════════
+function autoDetect() {
+  const cols = Object.keys(ROWS[0] || {});
+  const find = pats => cols.find(c => pats.some(p => p.test(String(c).toLowerCase()))) || '';
+  CM.escuela    = find([/escuela|local|establecimiento|colegio|nombre.*local/]);
+  CM.circuito   = find([/circuito|secci[oó]n|zona|c[oó]d.*circ/]);
+  CM.partido    = find([/partido|lista|espacio|agrupaci[oó]n|candidato|fuerza/]);
+  CM.votos      = find([/^votos$|votos_tot|total_vot|sufragio|^voto/]);
+  CM.padron     = find([/padr[oó]n|habilitado|elector|inscripto/]);
+  CM.anio       = find([/a[nñ]o|year|periodo/]);
+  CM.estamento  = find([/estamento|cargo|categor[ií]a|elecci[oó]n|tipo.*elec/]);
+  CM.masc       = find([/mascul|varon|hombre/]);
+  CM.fem        = find([/femeni|mujer/]);
+  if (!CM.votos) {
+    CM.votos = cols.find(c => {
+      const vs = ROWS.slice(0,30).map(r => parseFloat(r[c])).filter(v => !isNaN(v) && v > 0);
+      return vs.length > 8 && vs.some(v => v > 5);
+    }) || '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CONSTRUCCIÓN DEL APP
+// ═══════════════════════════════════════════════════════
+function buildApp() {
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  // Stats topbar
+  const anios = uniq(ROWS.map(r => r[CM.anio]).filter(Boolean)).sort();
+  const partidos = uniq(ROWS.map(r => r[CM.partido]).filter(Boolean));
+  const escuelas = uniq(ROWS.map(r => r[CM.escuela]).filter(Boolean));
+  document.getElementById('tb-stats').innerHTML = `
+    <span class="tb-stat"><strong>${ROWS.length.toLocaleString('es-AR')}</strong> registros</span>
+    <span class="tb-stat"><strong>${escuelas.length}</strong> escuelas</span>
+    <span class="tb-stat"><strong>${partidos.length}</strong> partidos</span>
+    <span class="tb-stat"><strong>${anios.length > 0 ? anios[0]+'–'+anios[anios.length-1] : '—'}</strong></span>
+  `;
+
+  // Build filters
+  buildFilters();
+  // Show first tab
+  showTab('escuelas', document.querySelector('.ntab'));
+}
+
+function buildFilters() {
+  const anios = uniq(ROWS.map(r=>r[CM.anio]).filter(Boolean)).sort();
+  const estamentos = uniq(ROWS.map(r=>CM.estamento?r[CM.estamento]:'').filter(Boolean)).sort();
+  const partidos = uniq(ROWS.map(r=>r[CM.partido]).filter(Boolean)).sort();
+  const circs = uniq(ROWS.map(r=>r[CM.circuito]).filter(Boolean)).sort();
+
+  fillSel('f-anio', anios, 'Todos los años');
+  fillSel('f-estamento', estamentos, 'Todos los estamentos');
+  fillSel('f-partido', partidos, 'Todos los partidos');
+  fillSel('f-circ', circs, 'Todos los circuitos');
+
+  ['f-anio','f-estamento','f-partido','f-circ','f-search'].forEach(id => {
+    document.getElementById(id).addEventListener('change', refresh);
+    document.getElementById(id).addEventListener('input', refresh);
+  });
+}
+
+function fillSel(id, opts, placeholder) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<option value="">${placeholder}</option>${opts.map(o=>`<option value="${o}">${o}</option>`).join('')}`;
+}
+
+function filteredRows() {
+  const anio = document.getElementById('f-anio').value;
+  const est = document.getElementById('f-estamento').value;
+  const partido = document.getElementById('f-partido').value;
+  const circ = document.getElementById('f-circ').value;
+  const q = document.getElementById('f-search').value.toLowerCase();
+  return ROWS.filter(r => {
+    if (anio && r[CM.anio] !== anio) return false;
+    if (est && CM.estamento && r[CM.estamento] !== est) return false;
+    if (partido && r[CM.partido] !== partido) return false;
+    if (circ && r[CM.circuito] !== circ) return false;
+    if (q && !(String(r[CM.escuela]||'').toLowerCase().includes(q) || String(r[CM.circuito]||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function refresh() { showTab(CURRENT_TAB, null); }
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function showTab(tab, btn) {
+  CURRENT_TAB = tab;
+  document.querySelectorAll('.ntab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else document.querySelectorAll('.ntab').forEach(b => { if (b.textContent.toLowerCase().includes(tab.substring(0,4))) b.classList.add('active'); });
+  destroyCharts();
+  document.getElementById('content').innerHTML = '';
+  const c = document.getElementById('content');
+  const rows = filteredRows();
+  document.getElementById('f-count').textContent = `${rows.length} registros`;
+  if (tab === 'escuelas')     tabEscuelas(rows, c);
+  else if (tab === 'circuitos')    tabCircuitos(rows, c);
+  else if (tab === 'historico')    tabHistorico(rows, c);
+  else if (tab === 'recuperacion') tabRecuperacion(rows, c);
+  else if (tab === 'fuerzas')      tabFuerzas(rows, c);
+  else if (tab === 'datos')        tabDatos(rows, c);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+const N = v => parseFloat(String(v||'').replace(/\./g,'').replace(',','.')) || 0;
+const FMT = v => Math.round(N(v)).toLocaleString('es-AR');
+const FMT1 = v => N(v).toFixed(1);
+const uniq = arr => [...new Set(arr.filter(x => x !== null && x !== undefined && String(x).trim() !== ''))];
+
+function destroyCharts() { CHARTS.forEach(c => { try{c.destroy()}catch(e){} }); CHARTS = []; }
+function addChart(c) { CHARTS.push(c); return c; }
+function mkCv(h) {
+  const w = document.createElement('div'); w.className='cw'; w.style.height=h||'220px';
+  const cv = document.createElement('canvas'); w.appendChild(cv); return {w, cv};
+}
+function mkCard(title, content='') {
+  const d = document.createElement('div'); d.className='card';
+  d.innerHTML = `<div class="card-title">${title}</div>${content}`; return d;
+}
+
+function buildProfiles(rows) {
+  // Por escuela: agrupa por partido, calcula ganador, perdedor, margen
+  const escKey = CM.escuela || CM.circuito || Object.keys(ROWS[0]||{})[0];
+  const byEsc = {};
+  rows.forEach(r => {
+    const esc = String(r[escKey]||'').trim(); if (!esc) return;
+    const partido = String(r[CM.partido]||'SIN PARTIDO').trim();
+    const votos = N(r[CM.votos]);
+    const padron = CM.padron ? N(r[CM.padron]) : 0;
+    const circ = CM.circuito ? String(r[CM.circuito]||'').trim() : '';
+    const anio = CM.anio ? String(r[CM.anio]||'').trim() : '';
+    const masc = CM.masc ? N(r[CM.masc]) : 0;
+    const fem = CM.fem ? N(r[CM.fem]) : 0;
+    if (!byEsc[esc]) byEsc[esc] = { partidos:{}, padron:0, circ, anio, masc, fem };
+    byEsc[esc].partidos[partido] = (byEsc[esc].partidos[partido]||0) + votos;
+    if (padron > byEsc[esc].padron) byEsc[esc].padron = padron;
+    if (masc > byEsc[esc].masc) byEsc[esc].masc = masc;
+    if (fem > byEsc[esc].fem) byEsc[esc].fem = fem;
+  });
+  return Object.entries(byEsc).map(([esc, d]) => {
+    const sorted = Object.entries(d.partidos).sort((a,b)=>b[1]-a[1]);
+    const total = sorted.reduce((s,x)=>s+x[1], 0);
+    const w = sorted[0]||['—',0]; const r2 = sorted[1]||['—',0];
+    return {
+      escuela:esc, circ:d.circ, padron:d.padron, masc:d.masc, fem:d.fem,
+      partidos:d.partidos, sorted,
+      winner:w[0], winV:w[1], runner:r2[0], runV:r2[1],
+      margen: w[1]-r2[1], total,
+      winPct: total ? w[1]/total*100 : 0,
+      part: d.padron && total ? total/d.padron*100 : 0
+    };
+  }).sort((a,b) => b.total-a.total);
+}
+
+function mcard(lbl, val, sub, col) {
+  const d = document.createElement('div'); d.className='mc';
+  d.innerHTML=`<div class="mc-top" style="background:${col}"></div><div class="mc-lbl">${lbl}</div><div class="mc-val" style="font-size:${String(val).length>10?'17px':'26px'}">${val}</div><div class="mc-sub">${sub}</div>`;
+  return d;
+}
+
+function sortedTable(arr, col, dir) {
+  return [...arr].sort((a,b) => {
+    const va = a[col]; const vb = b[col];
+    if (typeof va === 'number') return (va-vb)*dir;
+    return String(va||'').localeCompare(String(vb||''))*dir;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: POR ESCUELA
+// ═══════════════════════════════════════════════════════
+function tabEscuelas(rows, c) {
+  if (!rows.length || !CM.votos) {
+    c.innerHTML = `<div class="empty">Sin datos para los filtros seleccionados.<br>Verificá que el archivo tenga columnas de escuela, partido y votos.</div>`;
+    return;
+  }
+  const profiles = buildProfiles(rows);
+  if (!profiles.length) { c.innerHTML = `<div class="empty">No se pudieron construir perfiles de escuelas.</div>`; return; }
+
+  // Metrics
+  const mg = document.createElement('div'); mg.className='metrics-row';
+  const totalEsc = profiles.length;
+  const totalV = profiles.reduce((s,p)=>s+p.total, 0);
+  const maxMarg = profiles.reduce((a,p)=>p.margen>a.margen?p:a, profiles[0]);
+  const minMarg = profiles.filter(p=>p.margen>=0).reduce((a,p)=>p.margen<a.margen?p:a, profiles[0]);
+  const avgPart = profiles.filter(p=>p.part>0).reduce((s,p)=>s+p.part,0)/Math.max(1,profiles.filter(p=>p.part>0).length);
+  [
+    {l:'Escuelas analizadas', v:totalEsc, s:'unidades electorales', col:'var(--acc)'},
+    {l:'Total votos', v:FMT(totalV), s:'suma del período filtrado', col:'var(--blu)'},
+    {l:'Mayor margen', v:maxMarg.escuela.slice(0,14), s:`+${FMT(maxMarg.margen)} votos · ${maxMarg.winner.slice(0,18)}`, col:'var(--grn)'},
+    {l:'Resultado más cerrado', v:minMarg.escuela.slice(0,14), s:`${FMT(minMarg.margen)} votos de diferencia`, col:'var(--acc)'},
+    ...(avgPart>0?[{l:'Participación prom.', v:FMT1(avgPart)+'%', s:'votos / padrón', col:'var(--pur)'}]:[]),
+  ].forEach(m => mg.appendChild(mcard(m.l,m.v,m.s,m.col)));
+  c.appendChild(mg);
+
+  // Torta macro
+  const g = document.createElement('div'); g.className='g2';
+  const c1 = mkCard('DISTRIBUCIÓN TOTAL DE VOTOS POR PARTIDO');
+  const {w:w1,cv:cv1} = mkCv('260px'); c1.appendChild(w1); g.appendChild(c1);
+  const c2 = mkCard('MÁRGENES POR ESCUELA — ordenado de menor a mayor');
+  const {w:w2,cv:cv2} = mkCv('260px'); c2.appendChild(w2); g.appendChild(c2);
+  c.appendChild(g);
+
+  // Tabla escuelas
+  const tcard = mkCard('RESULTADOS POR ESCUELA — clic en fila para ver detalle');
+  const tw = document.createElement('div'); tw.className='tw maxh';
+  const thCols = [
+    {k:'escuela',l:'Escuela / Local'},{k:'circ',l:'Circ.'},
+    {k:'winner',l:'Partido ganador'},{k:'winPct',l:'% ganador'},
+    {k:'winV',l:'Votos 1ro'},{k:'runner',l:'2do partido'},
+    {k:'runV',l:'Votos 2do'},{k:'margen',l:'Margen'},
+    {k:'total',l:'Total'},{k:'padron',l:'Padrón'},{k:'part',l:'Part.%'}
+  ].filter(col => col.k!=='padron' || profiles.some(p=>p.padron>0))
+   .filter(col => col.k!=='part' || profiles.some(p=>p.part>0));
+
+  function renderTbl() {
+    const dir = SORT.dir;
+    const sorted = SORT.col ? sortedTable(profiles, SORT.col, dir) : profiles;
+    let html = `<table class="tbl"><thead><tr>${thCols.map(col=>`<th onclick="doSort('${col.k}')" class="${SORT.col===col.k?(SORT.dir>0?'sa':'sd'):''}">${col.l}</th>`).join('')}</tr></thead><tbody>`;
+    sorted.forEach(p => {
+      const mTag = p.margen < 30 ? 'tc' : p.margen < 0 ? 'tl' : 'tw';
+      const mLabel = p.margen < 0 ? 'PERDIÓ' : p.margen < 30 ? 'CERCA' : 'GANÓ';
+      const wColor = getColor(p.winner);
+      html += `<tr style="cursor:pointer" onclick="openEscuela('${p.escuela.replace(/'/g,"\\'")}')">
+        <td title="${p.escuela}" style="max-width:190px;overflow:hidden;text-overflow:ellipsis"><b>${p.escuela.slice(0,30)}</b></td>
+        <td style="color:var(--m2);font-family:'IBM Plex Mono',monospace;font-size:10px">${p.circ||'—'}</td>
+        <td><span class="p-badge" style="background:${wColor}22;color:${wColor};border:1px solid ${wColor}44">${p.winner.slice(0,22)}</span></td>
+        <td class="tr"><b>${FMT1(p.winPct)}%</b></td>
+        <td class="tr">${FMT(p.winV)}</td>
+        <td style="color:var(--m2);max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:10px">${p.runner.slice(0,20)}</td>
+        <td class="tr">${FMT(p.runV)}</td>
+        <td class="tr"><span class="tag ${mTag}">${FMT(p.margen)}</span></td>
+        <td class="tr">${FMT(p.total)}</td>
+        ${profiles.some(x=>x.padron>0)?`<td class="tr">${p.padron?FMT(p.padron):'—'}</td>`:''}
+        ${profiles.some(x=>x.part>0)?`<td class="tr">${p.part>0?FMT1(p.part)+'%':'—'}</td>`:''}
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    tw.innerHTML = html;
+  }
+  renderTbl();
+  tcard.appendChild(tw); c.appendChild(tcard);
+
+  setTimeout(() => {
+    // Torta partidos
+    const byP = {};
+    profiles.forEach(p => Object.entries(p.partidos).forEach(([part,v])=>{ byP[part]=(byP[part]||0)+v; }));
+    const sorted8 = Object.entries(byP).sort((a,b)=>b[1]-a[1]).slice(0,9);
+    addChart(new Chart(cv1, { type:'pie',
+      data:{ labels:sorted8.map(x=>x[0]), datasets:[{ data:sorted8.map(x=>x[1]), backgroundColor:sorted8.map(x=>getColor(x[0])), borderWidth:0, hoverOffset:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#7a88a0', boxWidth:10, padding:10, font:{size:9} } } } }
+    }));
+    // Barras margen
+    const topM = [...profiles].sort((a,b)=>a.margen-b.margen).slice(0,14);
+    addChart(new Chart(cv2, { type:'bar',
+      data:{ labels:topM.map(p=>p.escuela.slice(0,16)), datasets:[{ data:topM.map(p=>p.margen), backgroundColor:topM.map(p=>p.margen<30?'#f0c04088':'#2ecc8a88'), borderColor:topM.map(p=>p.margen<30?'#f0c040':'#2ecc8a'), borderWidth:1, borderRadius:3, borderSkipped:false }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}},
+        scales:{ x:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}}, y:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}} } }
+    }));
+  }, 60);
+}
+
+// ═══════════════════════════════════════════════════════
+// DETALLE ESCUELA (MODAL)
+// ═══════════════════════════════════════════════════════
+function openEscuela(escNombre) {
+  const escKey = CM.escuela || CM.circuito || Object.keys(ROWS[0]||{})[0];
+  const escRows = ROWS.filter(r => String(r[escKey]||'').trim() === escNombre);
+  if (!escRows.length) return;
+
+  const anios = uniq(escRows.map(r=>r[CM.anio]).filter(Boolean)).sort();
+  const byAnio = {};
+  anios.forEach(y => { byAnio[y] = {}; });
+  escRows.forEach(r => {
+    const y = CM.anio ? String(r[CM.anio]||'N/A').trim() : 'N/A';
+    const p = String(r[CM.partido]||'SIN PARTIDO').trim();
+    const v = N(r[CM.votos]);
+    if (!byAnio[y]) byAnio[y] = {};
+    byAnio[y][p] = (byAnio[y][p]||0) + v;
+  });
+
+  document.getElementById('modal-title').textContent = escNombre;
+
+  let html = '';
+  anios.forEach(y => {
+    const partidos = Object.entries(byAnio[y]).sort((a,b)=>b[1]-a[1]);
+    const total = partidos.reduce((s,x)=>s+x[1],0);
+    const winner = partidos[0]||['—',0];
+    const runner = partidos[1]||['—',0];
+    const margen = winner[1]-runner[1];
+    const mTag = margen<30?'tc':'tw';
+
+    html += `<div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--acc)">${y}</div>
+        <span class="tag ${mTag}">MARGEN: ${FMT(margen)} votos</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid ${getColor(winner[0])}">
+          <div style="font-size:9px;color:var(--m1);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">1er lugar</div>
+          <div style="font-size:11px;font-weight:500;color:var(--txt);margin-bottom:2px">${winner[0]}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${getColor(winner[0])}">${FMT(winner[1])}</div>
+          <div style="font-size:10px;color:var(--m2)">${total?FMT1(winner[1]/total*100):'0'}%</div>
+        </div>
+        <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid ${getColor(runner[0])}">
+          <div style="font-size:9px;color:var(--m1);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">2do lugar</div>
+          <div style="font-size:11px;font-weight:500;color:var(--txt);margin-bottom:2px">${runner[0]}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${getColor(runner[0])}">${FMT(runner[1])}</div>
+          <div style="font-size:10px;color:var(--m2)">${total?FMT1(runner[1]/total*100):'0'}%</div>
+        </div>
+      </div>
+      <canvas id="modal-chart-${y}" style="max-height:200px;width:100%"></canvas>
+      <div style="margin-top:8px">
+        ${partidos.map(([p,v])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${getColor(p)};flex-shrink:0"></div>
+            <div style="flex:1;font-size:10px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m2);flex-shrink:0">${FMT(v)}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1);flex-shrink:0;width:42px;text-align:right">${total?FMT1(v/total*100):'0'}%</div>
+            <div style="width:60px;flex-shrink:0"><div class="pb"><div class="pbf" style="width:${total?v/total*100:0}%;background:${getColor(p)}"></div></div></div>
+          </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m2);border-top:1px solid var(--b2);margin-top:4px">
+          <span>Total votos</span><span style="color:var(--txt)">${FMT(total)}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('show');
+
+  // Draw pie charts per year
+  setTimeout(() => {
+    anios.forEach(y => {
+      const cv = document.getElementById(`modal-chart-${y}`);
+      if (!cv) return;
+      const partidos = Object.entries(byAnio[y]).sort((a,b)=>b[1]-a[1]);
+      const ch = new Chart(cv, { type:'pie',
+        data:{ labels:partidos.map(x=>x[0]), datasets:[{ data:partidos.map(x=>x[1]), backgroundColor:partidos.map(x=>getColor(x[0])), borderWidth:0, hoverOffset:4 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#7a88a0', boxWidth:9, padding:8, font:{size:9} } } } }
+      });
+      CHARTS.push(ch);
+    });
+  }, 60);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: CIRCUITOS
+// ═══════════════════════════════════════════════════════
+function tabCircuitos(rows, c) {
+  if (!rows.length) { c.innerHTML=`<div class="empty">Sin datos para los filtros seleccionados.</div>`; return; }
+  const circKey = CM.circuito || CM.escuela || Object.keys(ROWS[0]||{})[0];
+  const byCirc = {};
+  rows.forEach(r => {
+    const circ = String(r[circKey]||'').trim(); if (!circ) return;
+    const p = String(r[CM.partido]||'').trim();
+    const v = N(r[CM.votos]);
+    if (!byCirc[circ]) byCirc[circ] = {};
+    byCirc[circ][p] = (byCirc[circ][p]||0) + v;
+  });
+  const stats = Object.entries(byCirc).map(([circ, ps]) => {
+    const sorted = Object.entries(ps).sort((a,b)=>b[1]-a[1]);
+    const total = sorted.reduce((s,x)=>s+x[1],0);
+    const w=sorted[0]||['—',0]; const r2=sorted[1]||['—',0];
+    return { circ, winner:w[0], winV:w[1], runner:r2[0], runV:r2[1], margen:w[1]-r2[1], total, winPct:total?w[1]/total*100:0, partidos:ps };
+  }).sort((a,b)=>b.total-a.total);
+
+  const mg = document.createElement('div'); mg.className='metrics-row';
+  [
+    {l:'Circuitos', v:stats.length, s:'unidades detectadas', col:'var(--acc)'},
+    {l:'Mayor votación', v:stats[0]?.circ||'—', s:FMT(stats[0]?.total||0)+' votos', col:'var(--blu)'},
+    {l:'Más disputado', v:[...stats].sort((a,b)=>a.margen-b.margen)[0]?.circ||'—', s:FMT([...stats].sort((a,b)=>a.margen-b.margen)[0]?.margen||0)+' votos margen', col:'var(--acc)'},
+    {l:'Total votos', v:FMT(stats.reduce((s,x)=>s+x.total,0)), s:'en el filtro', col:'var(--grn)'},
+  ].forEach(m=>mg.appendChild(mcard(m.l,m.v,m.s,m.col)));
+  c.appendChild(mg);
+
+  const g = document.createElement('div'); g.className='g2';
+  const c1 = mkCard('VOTOS POR CIRCUITO');
+  const {w:w1,cv:cv1}=mkCv('260px'); c1.appendChild(w1); g.appendChild(c1);
+  const c2 = mkCard('TORTA GLOBAL — TODOS LOS CIRCUITOS');
+  const {w:w2,cv:cv2}=mkCv('260px'); c2.appendChild(w2); g.appendChild(c2);
+  c.appendChild(g);
+
+  const tcard = mkCard('DETALLE POR CIRCUITO');
+  const tw = document.createElement('div'); tw.className='tw maxh';
+  let html = `<table class="tbl"><thead><tr><th>Circuito</th><th>Partido ganador</th><th class="tr">% ganador</th><th class="tr">Votos 1ro</th><th>2do partido</th><th class="tr">Votos 2do</th><th class="tr">Margen</th><th class="tr">Total</th></tr></thead><tbody>`;
+  stats.forEach(x => {
+    const wc = getColor(x.winner);
+    html += `<tr>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--acc)">${x.circ}</td>
+      <td><span class="p-badge" style="background:${wc}22;color:${wc};border:1px solid ${wc}44">${x.winner.slice(0,24)}</span></td>
+      <td class="tr"><b>${FMT1(x.winPct)}%</b></td><td class="tr">${FMT(x.winV)}</td>
+      <td style="color:var(--m2);font-size:10px">${x.runner.slice(0,22)}</td>
+      <td class="tr">${FMT(x.runV)}</td>
+      <td class="tr"><span class="tag ${x.margen<30?'tc':'tw'}">${FMT(x.margen)}</span></td>
+      <td class="tr">${FMT(x.total)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>'; tw.innerHTML=html; tcard.appendChild(tw); c.appendChild(tcard);
+
+  setTimeout(()=>{
+    addChart(new Chart(cv1,{type:'bar',data:{labels:stats.map(x=>x.circ.slice(0,18)),datasets:[{data:stats.map(x=>x.total),backgroundColor:'#4a90f544',borderColor:'#4a90f5',borderWidth:1,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}}}}}));
+    const byP={};stats.forEach(x=>Object.entries(x.partidos).forEach(([p,v])=>{byP[p]=(byP[p]||0)+v;}));
+    const sorted9=Object.entries(byP).sort((a,b)=>b[1]-a[1]).slice(0,9);
+    addChart(new Chart(cv2,{type:'pie',data:{labels:sorted9.map(x=>x[0]),datasets:[{data:sorted9.map(x=>x[1]),backgroundColor:sorted9.map(x=>getColor(x[0])),borderWidth:0,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a88a0',boxWidth:9,padding:8,font:{size:9}}}}}}));
+  },60);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: HISTÓRICO
+// ═══════════════════════════════════════════════════════
+function tabHistorico(rows, c) {
+  if (!CM.anio) { c.innerHTML=`<div class="empty">No se detectó columna de año. Verificá que el archivo tenga una columna "año" o "year".</div>`; return; }
+  const anios = uniq(rows.map(r=>r[CM.anio]).filter(Boolean)).sort();
+  if (anios.length < 1) { c.innerHTML=`<div class="empty">Sin datos de años en el filtro actual.</div>`; return; }
+
+  const byAnioP = {};
+  anios.forEach(y=>byAnioP[y]={});
+  rows.forEach(r=>{
+    const y=String(r[CM.anio]||'').trim();
+    const p=String(r[CM.partido]||'').trim();
+    const v=N(r[CM.votos]);
+    if(!y||!p||!v) return;
+    if(!byAnioP[y]) byAnioP[y]={};
+    byAnioP[y][p]=(byAnioP[y][p]||0)+v;
+  });
+  const totalByAnio=Object.fromEntries(anios.map(y=>[y,Object.values(byAnioP[y]).reduce((s,v)=>s+v,0)]));
+  const allP=uniq(Object.values(byAnioP).flatMap(x=>Object.keys(x)));
+
+  const mg = document.createElement('div'); mg.className='metrics-row';
+  [
+    {l:'Período', v:anios[0]+(anios.length>1?'–'+anios[anios.length-1]:''), s:anios.length+' elecciones', col:'var(--acc)'},
+    {l:'Fuerzas políticas', v:allP.length, s:'distintas en el período', col:'var(--pur)'},
+    {l:'Elección más votada', v:Object.entries(totalByAnio).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—', s:FMT(Object.entries(totalByAnio).sort((a,b)=>b[1]-a[1])[0]?.[1]||0)+' votos', col:'var(--blu)'},
+    {l:'Total histórico', v:FMT(Object.values(totalByAnio).reduce((s,v)=>s+v,0)), s:'votos acumulados', col:'var(--grn)'},
+  ].forEach(m=>mg.appendChild(mcard(m.l,m.v,m.s,m.col)));
+  c.appendChild(mg);
+
+  // Line chart evolución
+  const c1 = mkCard('EVOLUCIÓN DE VOTOS POR PARTIDO — 2012 a 2025');
+  const {w:w1,cv:cv1}=mkCv('300px'); c1.appendChild(w1); c1.style.marginBottom='14px';
+  c.appendChild(c1);
+
+  // Tortas por año
+  if (anios.length > 1) {
+    const tortas = document.createElement('div');
+    tortas.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:14px';
+    anios.forEach(y => {
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML=`<div class="card-title">${y} — ${FMT(totalByAnio[y])} votos</div>`;
+      const {w,cv}=mkCv('200px'); card.appendChild(w); tortas.appendChild(card);
+      setTimeout(()=>{
+        const ps=Object.entries(byAnioP[y]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        addChart(new Chart(cv,{type:'pie',data:{labels:ps.map(x=>x[0]),datasets:[{data:ps.map(x=>x[1]),backgroundColor:ps.map(x=>getColor(x[0])),borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a88a0',boxWidth:8,padding:6,font:{size:8}}}}}}));
+      },60);
+    });
+    c.appendChild(tortas);
+  }
+
+  // Pivot table
+  const tcard=mkCard('TABLA PIVOTE — VOTOS POR PARTIDO Y AÑO (clic en partido para filtrar)');
+  const tw=document.createElement('div'); tw.className='tw maxh';
+  const topP=allP.map(p=>({p,tot:anios.reduce((s,y)=>s+(byAnioP[y][p]||0),0)})).sort((a,b)=>b.tot-a.tot).slice(0,10).map(x=>x.p);
+  let html=`<table class="tbl"><thead><tr><th>Partido</th>${anios.map(y=>`<th class="tr">${y}</th>`).join('')}<th class="tr">Total</th></tr></thead><tbody>`;
+  topP.forEach(p=>{
+    const col=getColor(p);
+    const tot=anios.reduce((s,y)=>s+(byAnioP[y][p]||0),0);
+    html+=`<tr><td><span class="p-badge" style="background:${col}22;color:${col};border:1px solid ${col}44">${p.slice(0,28)}</span></td>${anios.map(y=>{
+      const v=byAnioP[y][p]||0;
+      const sh=totalByAnio[y]?v/totalByAnio[y]*100:0;
+      return`<td class="tr">${v?`${FMT(v)}<br><span style="color:var(--m1);font-size:9px">${FMT1(sh)}%</span>`:'<span style="color:var(--m1)">—</span>'}`;
+    }).join('')}<td class="tr"><b>${FMT(tot)}</b></td></tr>`;
+  });
+  html+=`<tr style="border-top:1px solid var(--b2)"><td style="color:var(--m2);font-family:'IBM Plex Mono',monospace;font-size:10px">TOTAL</td>${anios.map(y=>`<td class="tr" style="color:var(--m2);font-family:'IBM Plex Mono',monospace;font-size:10px">${FMT(totalByAnio[y])}</td>`).join('')}<td class="tr" style="color:var(--txt);font-weight:600">${FMT(Object.values(totalByAnio).reduce((s,v)=>s+v,0))}</td></tr>`;
+  html+='</tbody></table>'; tw.innerHTML=html; tcard.appendChild(tw); c.appendChild(tcard);
+
+  setTimeout(()=>{
+    const datasets=topP.slice(0,8).map(p=>({
+      label:p, data:anios.map(y=>byAnioP[y][p]||0),
+      borderColor:getColor(p), backgroundColor:'transparent',
+      tension:0.3, pointRadius:5, borderWidth:2, pointBackgroundColor:getColor(p)
+    }));
+    addChart(new Chart(cv1,{type:'line',data:{labels:anios,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a88a0',boxWidth:9,padding:12,font:{size:9}}}},scales:{y:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},x:{ticks:{color:'#7a88a0'},grid:{display:false}}}}}));
+  },60);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: RECUPERACIÓN DE VOTOS
+// ═══════════════════════════════════════════════════════
+function tabRecuperacion(rows, c) {
+  if (!rows.length) { c.innerHTML=`<div class="empty">Sin datos para los filtros seleccionados.</div>`; return; }
+
+  const allP = uniq(rows.map(r=>r[CM.partido]).filter(Boolean)).sort();
+  const anios = uniq(rows.map(r=>r[CM.anio]).filter(Boolean)).sort();
+
+  // Selector
+  const sel = document.createElement('div');
+  sel.style.cssText='display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center';
+  sel.innerHTML=`
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1)">Analizar partido:</span>
+    <select class="fsel" id="r-partido"><option value="">— Seleccioná —</option>${allP.map(p=>`<option value="${p}">${p}</option>`).join('')}</select>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--m1)">Año:</span>
+    <select class="fsel" id="r-anio"><option value="">Todos / más reciente</option>${anios.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+  `;
+  c.appendChild(sel);
+
+  const resultArea = document.createElement('div');
+  c.appendChild(resultArea);
+
+  function render() {
+    destroyCharts();
+    resultArea.innerHTML='';
+    const partido=document.getElementById('r-partido').value;
+    const year=document.getElementById('r-anio').value || anios[anios.length-1];
+    if(!partido){resultArea.innerHTML=`<div class="empty">Seleccioná un partido para ver el análisis de recuperación de votos por escuela.</div>`;return;}
+
+    const subRows = year ? rows.filter(r=>!CM.anio||r[CM.anio]===year) : rows;
+    const profiles = buildProfiles(subRows);
+
+    const rData = profiles.map(p=>{
+      const pV = p.partidos[partido]||0;
+      const deficit = p.winV - pV;
+      const didWin = p.winner===partido;
+      const gap50 = p.total ? Math.max(0,Math.ceil(p.total*0.501)-pV) : 0;
+      return {...p, pV, deficit, didWin, gap50, pPct:p.total?pV/p.total*100:0};
+    }).filter(p=>p.total>0).sort((a,b)=>b.deficit-a.deficit);
+
+    const ganadas=rData.filter(r=>r.didWin).length;
+    const perdidas=rData.filter(r=>!r.didWin).length;
+    const totalDeficit=rData.filter(r=>!r.didWin).reduce((s,r)=>s+r.deficit,0);
+    const masCercas=rData.filter(r=>!r.didWin).sort((a,b)=>a.deficit-b.deficit).slice(0,5);
+
+    const mg=document.createElement('div'); mg.className='metrics-row';
+    [
+      {l:'Escuelas ganadas', v:ganadas, s:`${rData.length} totales · ${(ganadas/rData.length*100).toFixed(0)}%`, col:'var(--grn)'},
+      {l:'Escuelas perdidas', v:perdidas, s:`${(perdidas/rData.length*100).toFixed(0)}% del total`, col:'var(--red)'},
+      {l:'Déficit total', v:FMT(totalDeficit), s:'votos a recuperar en escuelas perdidas', col:'var(--acc)'},
+      {l:'Más cerca de ganar', v:masCercas[0]?.escuela.slice(0,14)||'—', s:`solo ${FMT(masCercas[0]?.deficit||0)} votos de diferencia`, col:'var(--pur)'},
+    ].forEach(m=>resultArea.appendChild(mcard(m.l,m.v,m.s,m.col)));
+
+    // Charts
+    const g=document.createElement('div'); g.className='g2';
+    const c1=mkCard(`VOTOS A RECUPERAR — ${partido.slice(0,28)}`);
+    const{w:w1,cv:cv1}=mkCv('280px'); c1.appendChild(w1); g.appendChild(c1);
+    const c2=mkCard(`% OBTENIDO POR ESCUELA — ${partido.slice(0,28)}`);
+    const{w:w2,cv:cv2}=mkCv('280px'); c2.appendChild(w2); g.appendChild(c2);
+    resultArea.appendChild(g);
+
+    // Torta ganadas vs perdidas
+    const g2=document.createElement('div'); g2.className='g2';
+    const c3=mkCard('GANADAS vs PERDIDAS — DISTRIBUCIÓN');
+    const{w:w3,cv:cv3}=mkCv('220px'); c3.appendChild(w3); g2.appendChild(c3);
+    const c4=mkCard('% POR ESCUELA — COMPARATIVA (TOP 10 MÁS CERCANAS)');
+    const{w:w4,cv:cv4}=mkCv('220px'); c4.appendChild(w4); g2.appendChild(c4);
+    resultArea.appendChild(g2);
+
+    const tcard=mkCard(`TABLA DETALLADA — ${partido.slice(0,36)} · ${year||'período'}`);
+    const tw=document.createElement('div'); tw.className='tw maxh';
+    let html=`<table class="tbl"><thead><tr><th>Escuela</th><th>Circ.</th><th class="tr">Votos ${partido.slice(0,12)}</th><th class="tr">% obtenido</th><th>Ganador</th><th class="tr">Votos ganador</th><th class="tr">Déficit</th><th class="tr">Para 50%+1</th><th class="tr">Total</th><th>Estado</th></tr></thead><tbody>`;
+    rData.forEach(r=>{
+      const tag=r.didWin?'tw':r.deficit<=50?'tc':'tl';
+      const lab=r.didWin?'GANÓ':r.deficit<=50?'CERCA':'PERDIÓ';
+      html+=`<tr>
+        <td title="${r.escuela}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis"><b>${r.escuela.slice(0,28)}</b></td>
+        <td style="color:var(--m2);font-family:'IBM Plex Mono',monospace;font-size:10px">${r.circ||'—'}</td>
+        <td class="tr" style="color:var(--acc)">${FMT(r.pV)}</td>
+        <td class="tr"><b>${FMT1(r.pPct)}%</b></td>
+        <td title="${r.winner}" style="color:var(--m2);font-size:10px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${r.winner.slice(0,20)}</td>
+        <td class="tr">${FMT(r.winV)}</td>
+        <td class="tr" style="color:${r.didWin?'var(--grn)':'var(--red)'}">${r.didWin?'—':FMT(r.deficit)}</td>
+        <td class="tr" style="color:var(--m2)">${r.gap50?FMT(r.gap50):'—'}</td>
+        <td class="tr">${FMT(r.total)}</td>
+        <td><span class="tag ${tag}">${lab}</span></td>
+      </tr>`;
+    });
+    html+='</tbody></table>'; tw.innerHTML=html; tcard.appendChild(tw); resultArea.appendChild(tcard);
+
+    setTimeout(()=>{
+      const topD=rData.filter(r=>!r.didWin).sort((a,b)=>a.deficit-b.deficit).slice(0,14);
+      addChart(new Chart(cv1,{type:'bar',data:{labels:topD.map(r=>r.escuela.slice(0,16)),datasets:[{data:topD.map(r=>r.deficit),backgroundColor:topD.map(r=>r.deficit<=50?'#f0c04088':'#f0505088'),borderColor:topD.map(r=>r.deficit<=50?'#f0c040':'#f05050'),borderWidth:1,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}}}}}));
+      const byPct=[...rData].sort((a,b)=>a.pPct-b.pPct).slice(0,14);
+      addChart(new Chart(cv2,{type:'bar',data:{labels:byPct.map(r=>r.escuela.slice(0,16)),datasets:[{data:byPct.map(r=>+FMT1(r.pPct)),backgroundColor:byPct.map(r=>r.didWin?'#2ecc8a88':'#f0505088'),borderColor:byPct.map(r=>r.didWin?'#2ecc8a':'#f05050'),borderWidth:1,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{callback:v=>v+'%',color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}}}}}));
+      addChart(new Chart(cv3,{type:'pie',data:{labels:['Ganadas','Perdidas'],datasets:[{data:[ganadas,perdidas],backgroundColor:['#2ecc8a','#f05050'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a88a0',boxWidth:9,padding:10,font:{size:10}}}}}}));
+      const cerca10=masCercas.slice(0,10);
+      addChart(new Chart(cv4,{type:'bar',data:{labels:cerca10.map(r=>r.escuela.slice(0,14)),datasets:[{label:'Partido analizado',data:cerca10.map(r=>+FMT1(r.pPct)),backgroundColor:'#4a90f588',borderColor:'#4a90f5',borderWidth:1,borderRadius:3},{label:'Ganador',data:cerca10.map(r=>+FMT1(r.winPct)),backgroundColor:'#9b70f088',borderColor:'#9b70f0',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a88a0',boxWidth:8,padding:10,font:{size:9}}}},scales:{y:{max:100,ticks:{callback:v=>v+'%',color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},x:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}}}}}));
+    },60);
+  }
+
+  document.getElementById('r-partido').onchange=render;
+  document.getElementById('r-anio').onchange=render;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: FUERZAS POLÍTICAS
+// ═══════════════════════════════════════════════════════
+function tabFuerzas(rows, c) {
+  if (!rows.length) { c.innerHTML=`<div class="empty">Sin datos.</div>`; return; }
+  const anios=uniq(rows.map(r=>r[CM.anio]).filter(Boolean)).sort();
+  const byP={};
+  rows.forEach(r=>{
+    const p=String(r[CM.partido]||'').trim(); if(!p) return;
+    const v=N(r[CM.votos]); const y=String(r[CM.anio]||'').trim();
+    if(!byP[p]) byP[p]={total:0,anios:{},escuelas:new Set(),primeros:0};
+    byP[p].total+=v;
+    if(y) byP[p].anios[y]=(byP[p].anios[y]||0)+v;
+    const esc=String(r[CM.escuela]||r[CM.circuito]||'').trim();
+    if(esc) byP[p].escuelas.add(esc);
+  });
+
+  // Calcular primeros por escuela
+  const profiles=buildProfiles(rows);
+  profiles.forEach(p=>{ if(p.winner&&byP[p.winner]) byP[p.winner].primeros++; });
+
+  const sorted=Object.entries(byP).sort((a,b)=>b[1].total-a[1].total);
+  const totalGlobal=sorted.reduce((s,x)=>s+x[1].total,0);
+
+  const mg=document.createElement('div'); mg.className='metrics-row';
+  [
+    {l:'Fuerzas políticas', v:sorted.length, s:'distintas en todos los archivos', col:'var(--acc)'},
+    {l:'Total votos', v:FMT(totalGlobal), s:'suma acumulada del período', col:'var(--blu)'},
+    {l:'Fuerza dominante', v:sorted[0]?.[0].slice(0,14)||'—', s:FMT(sorted[0]?.[1].total||0)+' votos totales', col:'var(--grn)'},
+    {l:'Más escuelas ganadas', v:Object.entries(byP).sort((a,b)=>b[1].primeros-a[1].primeros)[0]?.[0].slice(0,14)||'—', s:Object.entries(byP).sort((a,b)=>b[1].primeros-a[1].primeros)[0]?.[1].primeros+' escuelas', col:'var(--pur)'},
+  ].forEach(m=>mg.appendChild(mcard(m.l,m.v,m.s,m.col)));
+  c.appendChild(mg);
+
+  const g=document.createElement('div'); g.className='g2';
+  const c1=mkCard('TOTAL DE VOTOS POR FUERZA — PERÍODO COMPLETO');
+  const{w:w1,cv:cv1}=mkCv('280px'); c1.appendChild(w1); g.appendChild(c1);
+  const c2=mkCard('PARTICIPACIÓN % — TORTA GENERAL');
+  const{w:w2,cv:cv2}=mkCv('280px'); c2.appendChild(w2); g.appendChild(c2);
+  c.appendChild(g);
+
+  if(anios.length>1){
+    const c3=mkCard('VOTOS POR FUERZA Y AÑO — EVOLUCIÓN');
+    const{w:w3,cv:cv3}=mkCv('280px'); c3.appendChild(w3); c3.style.marginBottom='14px';
+    c.appendChild(c3);
+    setTimeout(()=>{
+      const top6=sorted.slice(0,6);
+      addChart(new Chart(cv3,{type:'line',data:{labels:anios,datasets:top6.map(([p,d])=>({label:p,data:anios.map(y=>d.anios[y]||0),borderColor:getColor(p),backgroundColor:'transparent',tension:0.3,pointRadius:5,borderWidth:2,pointBackgroundColor:getColor(p)}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a88a0',boxWidth:9,padding:12,font:{size:9}}}},scales:{y:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},x:{ticks:{color:'#7a88a0'},grid:{display:false}}}}}));
+    },60);
+  }
+
+  // Cards por partido
+  const pcards=document.createElement('div'); pcards.className='g3';
+  sorted.slice(0,9).forEach(([p,d])=>{
+    const col=getColor(p);
+    const pct=totalGlobal?d.total/totalGlobal*100:0;
+    const pc=document.createElement('div'); pc.className='card';
+    pc.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:12px;height:12px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <div style="font-size:12px;font-weight:500;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p}">${p}</div>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${col};line-height:1">${FMT(d.total)}</div>
+      <div style="font-size:10px;color:var(--m2);margin-bottom:8px">votos totales · ${FMT1(pct)}%</div>
+      <div class="pb"><div class="pbf" style="width:${pct}%;background:${col}"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--m1)">
+        <span>Escuelas 1ro: <b style="color:${col}">${d.primeros}</b></span>
+        <span>Años presente: <b style="color:${col}">${Object.keys(d.anios).length}</b></span>
+      </div>`;
+    pcards.appendChild(pc);
+  });
+  c.appendChild(pcards);
+
+  setTimeout(()=>{
+    const top10=sorted.slice(0,10);
+    addChart(new Chart(cv1,{type:'bar',data:{labels:top10.map(x=>x[0].slice(0,22)),datasets:[{data:top10.map(x=>x[1].total),backgroundColor:top10.map(x=>getColor(x[0])+'88'),borderColor:top10.map(x=>getColor(x[0])),borderWidth:1,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>FMT(v),color:'#424e65'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7a88a0',font:{size:9}},grid:{display:false}}}}}));
+    addChart(new Chart(cv2,{type:'pie',data:{labels:top10.map(x=>x[0]),datasets:[{data:top10.map(x=>x[1].total),backgroundColor:top10.map(x=>getColor(x[0])),borderWidth:0,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a88a0',boxWidth:9,padding:10,font:{size:9}}}}}}));
+  },60);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB: DATOS RAW
+// ═══════════════════════════════════════════════════════
+function tabDatos(rows, c) {
+  const infoCard=mkCard('COLUMNAS DETECTADAS AUTOMÁTICAMENTE');
+  infoCard.querySelector('.card-title').textContent='COLUMNAS DETECTADAS AUTOMÁTICAMENTE';
+  infoCard.innerHTML+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${Object.entries(CM).map(([k,v])=>`<span style="background:var(--s2);border:1px solid var(--b2);border-radius:5px;padding:3px 9px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:${v?'var(--txt)':'var(--m1)'}"><span style="color:var(--m1)">${k}:</span> ${v||'—'}</span>`).join('')}</div>`;
+  c.appendChild(infoCard);
+
+  const note=document.createElement('div');
+  note.style.cssText='font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--m2);margin-bottom:10px';
+  note.textContent=`${rows.length.toLocaleString('es-AR')} registros en el filtro actual · mostrando primeras 200 filas`;
+  c.appendChild(note);
+
+  const tcard=mkCard('DATOS');
+  const tw=document.createElement('div'); tw.className='tw maxh';
+  const headers=Object.keys(ROWS[0]||{});
+  let html=`<table class="tbl"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.slice(0,200).forEach(r=>{
+    html+=`<tr>${headers.map(h=>{const v=r[h];const nv=parseFloat(String(v||'').replace(/\./g,'').replace(',','.'));
+      if(!isNaN(nv)&&v!==''&&v!==null&&v!==undefined&&String(v).trim()!=='')return`<td class="tr">${nv.toLocaleString('es-AR')}</td>`;
+      return`<td>${v||'—'}</td>`;}).join('')}</tr>`;
+  });
+  html+='</tbody></table>'; tw.innerHTML=html; tcard.appendChild(tw); c.appendChild(tcard);
+}
+
+// ═══════════════════════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════════════════════
+function doSort(col) {
+  if(SORT.col===col) SORT.dir*=-1; else{SORT.col=col;SORT.dir=-1;}
+  showTab(CURRENT_TAB,null);
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT CSV
+// ═══════════════════════════════════════════════════════
+function exportCSV() {
+  const profiles=buildProfiles(filteredRows());
+  if(!profiles.length){alert('Sin datos para exportar.');return;}
+  const headers=['escuela','circuito','partido_ganador','pct_ganador','votos_1ro','partido_2do','votos_2do','margen','total_votos','padron','participacion_pct'];
+  const rows=profiles.map(p=>[p.escuela,p.circ,p.winner,FMT1(p.winPct),p.winV,p.runner,p.runV,p.margen,p.total,p.padron||'',p.part>0?FMT1(p.part):'']);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\ufeff'+csv);
+  a.download='analisis_electoral_ushuaia.csv';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════════════════════
+function loadDemo() {
+  const escuelas=[['ESC.PROV. Nº41 M.BENEDETTI','1'],['COLEG.PROV. KLOKETEN','1'],['COLEGIO NACIONAL USHUAIA','2'],['ESC.PROV. Nº22 BAHÍA GOLONDRINA','2'],['ESC.PROV. Nº31 JUANA MANSO','3'],['COLEG.PROV. DR.SOBRAL','3'],['UNIV. NAC. TIERRA DEL FUEGO','4'],['ESC. JULIO VERNE','4'],['ESC.PROV. Nº9 PIEDRABUENA','4'],['COLEGIO DEL SUR','5'],['ESC.PROV. Nº34 YAK HARUIN','5'],['COLEG.TECN. OLGA B.DE ARKO','6'],['ESC.PROV. Nº13 ALTE.BROWN','6'],['COLEGIO MONSEÑOR ALEMÁN','7'],['ESC.PROV. Nº30 OSHOVIA','7'],['COLEGIO DON BOSCO','8'],['ESC.PROV. Nº1 D.F.SARMIENTO','8'],['I.P.E.S.','9'],['ESC.PROV. Nº16 DR.ARTURO BAS','9'],['COLEG.PROV. ERNESTO SÁBATO','11'],['C.I.E.U.','11']];
+  const cfg={
+    2015:{estamento:'Senador Provincial',partidos:{FPV:0.38,CAMBIEMOS:0.30,'FUERZA FUEGUINA':0.14,'FIT':0.07,OTROS:0.11}},
+    2017:{estamento:'Diputado Nacional',partidos:{CAMBIEMOS:0.36,FPV:0.34,'FUERZA FUEGUINA':0.12,'FIT':0.08,OTROS:0.10}},
+    2019:{estamento:'Senador Nacional',partidos:{'FRENTE DE TODOS':0.41,'JUNTOS POR EL CAMBIO':0.35,'DEFENDAMOS TDF':0.12,'FIT':0.07,OTROS:0.05}},
+    2021:{estamento:'Diputado Nacional',partidos:{'FRENTE DE TODOS':0.36,'JUNTOS POR EL CAMBIO':0.38,'DEFENDAMOS TDF':0.12,'FIT':0.08,OTROS:0.06}},
+    2023:{estamento:'Senador Nacional',partidos:{'UNION POR LA PATRIA':0.32,'JUNTOS POR EL CAMBIO':0.28,'LA LIBERTAD AVANZA':0.26,'DEFENDAMOS TDF':0.09,'FIT':0.05}},
+  };
+  const padronBase={'1':800,'2':1050,'3':1450,'4':950,'5':900,'6':730,'7':800,'8':850,'9':640,'11':750};
+  const demoRows=[];
+  let r=42;const rnd=()=>{r=(r*1664525+1013904223)&0xffffffff;return(r>>>0)/4294967296};
+  Object.entries(cfg).forEach(([anio,{estamento,partidos}])=>{
+    escuelas.forEach(([esc,circ])=>{
+      const pad=(padronBase[circ]||600)+Math.round((rnd()-0.5)*200);
+      const masc=Math.round(pad*(0.47+rnd()*0.06));
+      const fem=pad-masc;
+      const total=Math.round(pad*(0.65+rnd()*0.15));
+      const pnames=Object.keys(partidos); let rem=total;
+      pnames.forEach((p,i)=>{
+        const share=Math.max(0.01,partidos[p]+(rnd()-0.5)*0.06);
+        const v=i===pnames.length-1?Math.max(0,rem):Math.round(total*share);
+        rem-=v;
+        demoRows.push({ESCUELA:esc,CIRCUITO:circ,AÑO:String(anio),ESTAMENTO:estamento,PARTIDO:p,VOTOS:String(v),PADRON:String(pad),MASCULINOS:String(masc),FEMENINOS:String(fem)});
+      });
+    });
+  });
+  ROWS=demoRows;
+  FILES=[{file:{name:'DATOS DE EJEMPLO 2015–2023'},status:'ok'}];
+  autoDetect(); buildApp();
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function showLoading(msg){document.getElementById('ld-msg').textContent=msg||'PROCESANDO...';document.getElementById('loading').classList.add('show');}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function resetApp(){
+  destroyCharts(); ROWS=[]; FILES=[]; CM={escuela:'',circuito:'',partido:'',votos:'',padron:'',anio:'',estamento:'',masc:'',fem:''};
+  SORT={col:'',dir:-1}; colorIdx=0; Object.keys(partyColors).forEach(k=>delete partyColors[k]);
+  document.getElementById('app').style.display='none';
+  document.getElementById('upload-screen').style.display='flex';
+  document.getElementById('files-list').innerHTML='';
+  document.getElementById('launch-btn').classList.remove('ready');
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>
